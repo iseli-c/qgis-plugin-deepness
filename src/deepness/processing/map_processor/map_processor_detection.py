@@ -179,7 +179,7 @@ class MapProcessorDetection(MapProcessorWithModel):
             prov = vlayer.dataProvider()
             
             # Add confidence field to the layer
-            prov.addAttributes([QgsField("confidence", QVariant.Double)])
+            prov.addAttributes([QgsField("conf", QVariant.Double)])
             vlayer.updateFields()
 
             color = vlayer.renderer().symbol().color()
