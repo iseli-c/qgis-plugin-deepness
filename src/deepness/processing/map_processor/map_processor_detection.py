@@ -3,7 +3,8 @@ from typing import List
 
 import cv2
 import numpy as np
-from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsVectorLayer
+from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsVectorLayer, QgsField
+from PyQt5.QtCore import QVariant
 
 from deepness.common.processing_parameters.detection_parameters import DetectionParameters
 from deepness.processing import processing_utils
@@ -141,6 +142,7 @@ class MapProcessorDetection(MapProcessorWithModel):
                     ]
                     geometry = QgsGeometry.fromPolygonXY(polygon_xy_vec_vec)
                     feature.setGeometry(geometry)
+                    feature.setAttributes([float(det.conf)])  # Add confidence score as an attribute
                     features.append(feature)
                 else:
                     contours, _ = cv2.findContours(det.mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -170,17 +172,20 @@ class MapProcessorDetection(MapProcessorWithModel):
                         ]
                         geometry = QgsGeometry.fromPolygonXY(polygon_xy_vec_vec)
                         feature.setGeometry(geometry)
+                        feature.setAttributes([float(det.conf)])  # Add confidence score as an attribute
                         features.append(feature)
 
-            vlayer = QgsVectorLayer("multipolygon", self.model.get_channel_name(0, channel_id), "memory")
-            vlayer.setCrs(self.rlayer.crs())
+            vlayer = QgsVectorLayer("multipolygon?crs=" + self.rlayer.crs().authid(), self.model.get_channel_name(0, channel_id), "memory")
             prov = vlayer.dataProvider()
+            
+            # Add confidence field to the layer
+            prov.addAttributes([QgsField("confidence", QVariant.Double)])
+            vlayer.updateFields()
 
             color = vlayer.renderer().symbol().color()
             OUTPUT_VLAYER_COLOR_TRANSPARENCY = 80
             color.setAlpha(OUTPUT_VLAYER_COLOR_TRANSPARENCY)
             vlayer.renderer().symbol().setColor(color)
-            # TODO - add also outline for the layer (thicker black border)
 
             prov.addFeatures(features)
             vlayer.updateExtents()
